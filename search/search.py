@@ -84,19 +84,62 @@ def depthFirstSearch(problem):
     print "Start's successors:", problem.getSuccessors(problem.getStartState())
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    closedList = []
+    states = util.Stack()
+    states.push( (problem.getStartState(), []) )
+    while not states.isEmpty():
+        (state, actionChain) = states.pop()
+        if state in closedList:
+            continue
+        if problem.isGoalState(state):
+            return actionChain
+        closedList.append(state)
+        for (successor, action, stepCost) in problem.getSuccessors(state):
+            newActionChain = list(actionChain)
+            newActionChain.append(action)
+            states.push( (successor, newActionChain) )
+    return []
 
 def breadthFirstSearch(problem):
     """
     Search the shallowest nodes in the search tree first.
     """
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    closedList = []
+    states = util.Queue()
+    states.push( (problem.getStartState(), []) )
+    while not states.isEmpty():
+        (state, actionChain) = states.pop()
+        if state in closedList:
+            continue
+        if problem.isGoalState(state):
+            return actionChain
+        closedList.append(state)
+        for (successor, action, stepCost) in problem.getSuccessors(state):
+            newActionChain = list(actionChain)
+            newActionChain.append(action)
+            states.push( (successor, newActionChain) )
+    return []
 
 def uniformCostSearch(problem):
     "Search the node of least total cost first. "
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    closedList = []
+    states = util.PriorityQueue()
+    states.push( (problem.getStartState(), [], 0), 0 )
+    while not states.isEmpty():
+        (state, actionChain, cost) = states.pop()
+        if state in closedList:
+            continue
+        if problem.isGoalState(state):
+            return actionChain
+        closedList.append(state)
+        for (successor, action, stepCost) in problem.getSuccessors(state):
+            newActionChain = list(actionChain)
+            newActionChain.append(action)
+            newCost = cost + stepCost
+            states.push( (successor, newActionChain, newCost), newCost )
+    return []
 
 def nullHeuristic(state, problem=None):
     """
@@ -108,7 +151,23 @@ def nullHeuristic(state, problem=None):
 def aStarSearch(problem, heuristic=nullHeuristic):
     "Search the node that has the lowest combined cost and heuristic first."
     "*** YOUR CODE HERE ***"
-    util.raiseNotDefined()
+    closedList = {}
+    states = util.PriorityQueue()
+    state = problem.getStartState();
+    states.push( (state, [], 0), heuristic(state, problem))
+    while not states.isEmpty():
+        (state, actionChain, cost) = states.pop()
+        if state in closedList and closedList[state] <= cost:
+            continue
+        if problem.isGoalState(state):
+            return actionChain
+        closedList[state] = cost
+        for (successor, action, stepCost) in problem.getSuccessors(state):
+            newActionChain = list(actionChain)
+            newActionChain.append(action)
+            newCost = cost + stepCost
+            states.push( (successor, newActionChain, newCost), newCost + heuristic(successor, problem))
+    return []
 
 
 # Abbreviations
