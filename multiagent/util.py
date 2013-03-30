@@ -464,14 +464,17 @@ def nSample(distribution, values, n):
             cdf += distribution[distPos]
     return samples
 
-def sample(distribution, values = None, rand = random.Random()):
+def sample(distribution, values = None, rand = None):
     if type(distribution) == Counter:
         items = distribution.items()
         distribution = [i[1] for i in items]
         values = [i[0] for i in items]
     if sum(distribution) != 1:
         distribution = normalize(distribution)
-    choice = rand.random()
+    if rand == None:
+        choice = random.random()
+    else:
+        choice = rand.random()
     i, total= 0, distribution[0]
     while choice > total:
         i += 1

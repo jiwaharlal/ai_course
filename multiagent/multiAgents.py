@@ -4,7 +4,7 @@
 # project. You are free to use and extend these projects for educational
 # purposes. The Pacman AI projects were developed at UC Berkeley, primarily by
 # John DeNero (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
-# Student side autograding was added by Brad Miller, Nick Hay, and Pieter 
+# Student side autograding was added by Brad Miller, Nick Hay, and Pieter
 # Abbeel in Spring 2013.
 # For more info, see http://inst.eecs.berkeley.edu/~cs188/pacman/pacman.html
 
@@ -69,8 +69,25 @@ class ReflexAgent(Agent):
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
 
+        minDistanceToGhost = 999
+        for i in range (0, len(newGhostStates)):
+            if newScaredTimes[i] > 1:
+                continue
+            ghostPos = newGhostStates[i].getPosition()
+            distance = abs(ghostPos[0] - newPos[0]) + abs(ghostPos[1] - newPos[1])
+            minDistanceToGhost = min(minDistanceToGhost, distance)
+
+        foods = newFood.asList()
+        distancesToFood = [abs(newPos[0] - food[0]) + abs(newPos[1] - food[1]) for food in foods]
+        minDistanceToFood = 0
+        if len(distancesToFood) != 0:
+            minDistanceToFood = min(distancesToFood)
+
         "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        if minDistanceToGhost < 2:
+            return -99999
+        score = successorGameState.getScore()
+        return score * 10 - minDistanceToFood
 
 def scoreEvaluationFunction(currentGameState):
     """
@@ -124,8 +141,50 @@ class MinimaxAgent(MultiAgentSearchAgent):
           gameState.getNumAgents():
             Returns the total number of agents in the game
         """
+
+##        actions = gameState.getLegalActions(agentIndex)
+##        successors = [gameState.generateSuccessor(agentIndex, action) for action in actions]
+##        costs = [self.evaluationFunction(successor) for successor in successors]
+##        maxCostIndex = costs.index(max(costs))
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+##        self.counter = 0
+        action, cost = self.getMaxActionAndCost(gameState, self.depth)
+        return action
+
+    def getMaxActionAndCost(self, gameState, depth):
+        actions = gameState.getLegalActions(0)
+        successors = [gameState.generateSuccessor(0, action) for action in actions]
+        costs = []
+        for s in successors:
+            if s.isWin() or s.isLose():
+                costs.append(self.evaluationFunction(s))
+                continue
+            costs.append(self.getMinCost(s, depth, 1))
+
+        maxCost = max(costs)
+        maxCostIndex = costs.index(maxCost)
+        return (actions[maxCostIndex], maxCost)
+
+    def getMinCost(self, gameState, depth, agentIndex):
+        actions = gameState.getLegalActions(agentIndex)
+        successors = [gameState.generateSuccessor(agentIndex, action) for action in actions]
+        costs = []
+        for s in successors:
+            if s.isLose() or s.isWin():
+                costs.append(self.evaluationFunction(s))
+                continue
+            cost = 0
+            if agentIndex + 1 == gameState.getNumAgents():
+                if depth == 1:
+                    cost = self.evaluationFunction(s)
+                else:
+                    cost = self.getMaxActionAndCost(s, depth - 1)[1]
+            else:
+                cost = self.getMinCost(s, depth, agentIndex + 1)
+            costs.append(cost)
+        return min(costs)
+
+
 
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """

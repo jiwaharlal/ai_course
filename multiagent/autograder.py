@@ -18,6 +18,8 @@ import sys
 import projectParams
 import textDisplay
 import graphicsDisplay
+import random
+random.seed(0)
 
 # register arguments and set default values
 def readCommand(argv):

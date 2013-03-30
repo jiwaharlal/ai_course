@@ -79,7 +79,7 @@ class GameState:
         """
         Returns the legal actions for the agent specified.
         """
-        GameState.explored.add(self)
+#        GameState.explored.add(self)
         if self.isWin() or self.isLose(): return []
 
         if agentIndex == 0:  # Pacman is moving
@@ -116,6 +116,8 @@ class GameState:
         # Book keeping
         state.data._agentMoved = agentIndex
         state.data.score += state.data.scoreChange
+        GameState.explored.add(self)
+        GameState.explored.add(state)
         return state
 
     def getLegalPacmanActions( self ):

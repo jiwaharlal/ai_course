@@ -4,7 +4,7 @@
 # project. You are free to use and extend these projects for educational
 # purposes. The Pacman AI projects were developed at UC Berkeley, primarily by
 # John DeNero (denero@cs.berkeley.edu) and Dan Klein (klein@cs.berkeley.edu).
-# Student side autograding was added by Brad Miller, Nick Hay, and Pieter 
+# Student side autograding was added by Brad Miller, Nick Hay, and Pieter
 # Abbeel in Spring 2013.
 # For more info, see http://inst.eecs.berkeley.edu/~cs188/pacman/pacman.html
 
@@ -41,13 +41,13 @@ class MultiagentTreeState(object):
     def generateSuccessor(self, agentIndex, action):
         if VERBOSE:
             print "generateSuccessor(%s, %s, %s) -> %s" % (self.state, agentIndex, action, self.problem.stateToSuccessorMap[self.state][action])
-        self.problem.expandedStates.add(self.state)
-        return MultiagentTreeState(self.problem, self.problem.stateToSuccessorMap[self.state][action])
+        successor = self.problem.stateToSuccessorMap[self.state][action]
+        self.problem.generatedStates.add(successor)
+        return MultiagentTreeState(self.problem, successor)
 
     def getScore(self):
-        if VERBOSE:        
+        if VERBOSE:
             print "getScore(%s) -> %s" % (self.state, self.problem.evaluation[self.state])
-        self.problem.expandedStates.add(self.state)
         if self.state not in self.problem.evaluation:
             raise Exception('getScore() called on non-terminal state or before maximum depth achieved.')
         return float(self.problem.evaluation[self.state])
@@ -55,9 +55,8 @@ class MultiagentTreeState(object):
     def getLegalActions(self, agentIndex=0):
         if VERBOSE:
             print "getLegalActions(%s) -> %s" % (self.state, self.problem.stateToActions[self.state])
-        self.problem.expandedStates.add(self.state)
-        if len(self.problem.stateToActions[self.state]) == 0:
-            print "WARNING: getLegalActions called on leaf state %s" % (self.state,)
+        #if len(self.problem.stateToActions[self.state]) == 0:
+        #    print "WARNING: getLegalActions called on leaf state %s" % (self.state,)
         return list(self.problem.stateToActions[self.state])
 
     def isWin(self):
@@ -85,18 +84,18 @@ class MultiagentTreeProblem(object):
         self.loseStates = loseStates
         self.evaluation = evaluation
         self.successors = successors
-        
-        self.expandedStates = set([])
-        
+
+        self.reset()
+
         self.stateToSuccessorMap = defaultdict(dict)
         self.stateToActions = defaultdict(list)
         for state, action, nextState in successors:
             self.stateToActions[state].append(action)
             self.stateToSuccessorMap[state][action] = nextState
-    
+
     def reset(self):
-        self.expandedStates = set([])
-    
+        self.generatedStates = set([self.startState.state])
+
 
 def parseTreeProblem(testDict):
     numAgents = int(testDict["num_agents"])
@@ -121,7 +120,7 @@ def parseTreeProblem(testDict):
             successors.append((state, action, nextState))
         else:
             raise Exception, "[parseTree] Bad successor line: |%s|" % (line,)
-    
+
     return MultiagentTreeProblem(numAgents, startState, winStates, loseStates, successors, evaluation)
 
 
@@ -164,7 +163,7 @@ class GradingAgent(Agent):
 
     def getAction(self, state):
         GameState.getAndResetExplored()
-        studentAction = (self.studentAgent.getAction(state), sum(map(hash, GameState.getAndResetExplored())))
+        studentAction = (self.studentAgent.getAction(state), len(GameState.getAndResetExplored()))
         optimalActions = self.optimalActions[self.stepCount]
         altDepthActions = self.altDepthActions[self.stepCount]
         partialPlyBugActions = self.partialPlyBugActions[self.stepCount]
@@ -203,7 +202,7 @@ class GradingAgent(Agent):
         Return -1 if have only off by one depth moves.
         Return 0 otherwise.
         """
-        if self.wrongStatesExplored < 0: 
+        if self.wrongStatesExplored > 0:
             return -3
         if self.actionsConsistentWithOptimal.count(True) > 0:
             return 0
@@ -221,8 +220,8 @@ class PolyAgent(Agent):
         solutionAgents, alternativeDepthAgents, partialPlyBugAgents = self.construct_our_pacs(multiAgents, ourPacOptions)
         for p in solutionAgents:
             p.depth = depth
-        for p in partialPlyBugAgents: 
-            p.depth = depth 
+        for p in partialPlyBugAgents:
+            p.depth = depth
         for p in alternativeDepthAgents[:2]:
             p.depth = max(1, depth - 1)
         for p in alternativeDepthAgents[2:]:
@@ -262,13 +261,13 @@ class PolyAgent(Agent):
             if 'registerInitialState' in dir(agent):
                 agent.registerInitialState(state)
         random.seed(self.seed)
-    
+
     def getAction(self, state):
         # survey agents
         GameState.getAndResetExplored()
         optimalActionLists = []
         for agent in self.solutionAgents:
-            optimalActionLists.append((agent.getBestPacmanActions(state)[0], sum(map(hash, GameState.getAndResetExplored()))))
+            optimalActionLists.append((agent.getBestPacmanActions(state)[0], len(GameState.getAndResetExplored())))
         alternativeDepthLists = [agent.getBestPacmanActions(state)[0] for agent in self.alternativeDepthAgents]
         partialPlyBugLists = [agent.getBestPacmanActions(state)[0] for agent in self.partialPlyBugAgents]
         # record responses
@@ -278,11 +277,11 @@ class PolyAgent(Agent):
         self.stepCount += 1
         random.seed(self.seed + self.stepCount)
         return optimalActionLists[0][0][0]
-        
+
     def getTraces(self):
         # return traces from individual agents
         return (self.optimalActionLists, self.alternativeDepthLists, self.partialPlyBugLists)
-  
+
 class PacmanGameTreeTest(testClasses.TestCase):
 
     def __init__(self, question, testDict):
@@ -354,7 +353,7 @@ class PacmanGameTreeTest(testClasses.TestCase):
         else:
             ourPacOptions = {}
         pac = PolyAgent(self.seed, multiAgents, ourPacOptions, self.depth)
-        disp = self.question.getDisplay()        
+        disp = self.question.getDisplay()
         run(lay, self.layout_name, pac, [DirectionalGhost(i + 1) for i in range(2)], disp, name=self.alg)
         (optimalActions, altDepthActions, partialPlyBugActions) = pac.getTraces()
         # recover traces and record to file
@@ -379,31 +378,31 @@ class GraphGameTreeTest(testClasses.TestCase):
         self.problem.reset()
         studentAgent = getattr(multiAgents, self.alg)(depth=self.depth)
         action = studentAgent.getAction(self.problem.startState)
-        expanded = self.problem.expandedStates
-        return action, " ".join(sorted([str(s) for s in expanded]))
-        
+        generated = self.problem.generatedStates
+        return action, " ".join([str(s) for s in sorted(generated)])
+
     def addDiagram(self):
         self.addMessage('Tree:')
         for line in self.diagram:
-            self.addMessage(line)            
+            self.addMessage(line)
 
     def execute(self, grades, moduleDict, solutionDict):
         multiAgents = moduleDict['multiAgents']
         goldAction = solutionDict['action']
-        goldExpanded = solutionDict['expanded']
-        action, expanded = self.solveProblem(multiAgents)
-        
+        goldGenerated = solutionDict['generated']
+        action, generated = self.solveProblem(multiAgents)
+
         fail = False
         if action != goldAction:
             self.addMessage('Incorrect move for depth=%s' % (self.depth,))
             self.addMessage('    Student move: %s\n    Optimal move: %s' % (action, goldAction))
             fail = True
-        
-        if expanded != goldExpanded:
-            self.addMessage('Incorrect expanded nodes for depth=%s' % (self.depth,))
-            self.addMessage('    Student expanded nodes: %s\n    Correct expanded nodes: %s' % (expanded, goldExpanded))
+
+        if generated != goldGenerated:
+            self.addMessage('Incorrect generated nodes for depth=%s' % (self.depth,))
+            self.addMessage('    Student generated nodes: %s\n    Correct generated nodes: %s' % (generated, goldGenerated))
             fail = True
-        
+
         if fail:
             self.addDiagram()
             return self.testFail(grades)
@@ -412,18 +411,18 @@ class GraphGameTreeTest(testClasses.TestCase):
 
     def writeSolution(self, moduleDict, filePath):
         multiAgents = moduleDict['multiAgents']
-        action, expanded = self.solveProblem(multiAgents)
+        action, generated = self.solveProblem(multiAgents)
         with open(filePath, 'w') as handle:
             handle.write('# This is the solution file for %s.\n' % self.path)
             handle.write('action: "%s"\n' % (action,))
-            handle.write('expanded: "%s"\n' % (expanded,))
-        return True        
+            handle.write('generated: "%s"\n' % (generated,))
+        return True
 
 
 import time
 from util import TimeoutFunction
-   
-   
+
+
 class EvalAgentTest(testClasses.TestCase):
 
     def __init__(self, question, testDict):
@@ -432,43 +431,43 @@ class EvalAgentTest(testClasses.TestCase):
         self.agentName = testDict['agentName']
         self.ghosts = eval(testDict['ghosts'])
         self.maxTime = int(testDict['maxTime'])
-        self.seed = testDict['randomSeed']
+        self.seed = int(testDict['randomSeed'])
         self.numGames = int(testDict['numGames'])
 
         self.scoreMinimum = int(testDict['scoreMinimum']) if 'scoreMinimum' in testDict else None
         self.nonTimeoutMinimum = int(testDict['nonTimeoutMinimum']) if 'nonTimeoutMinimum' in testDict else None
         self.winsMinimum = int(testDict['winsMinimum']) if 'winsMinimum' in testDict else None
-                
+
         self.scoreThresholds = [int(s) for s in testDict.get('scoreThresholds','').split()]
         self.nonTimeoutThresholds = [int(s) for s in testDict.get('nonTimeoutThresholds','').split()]
         self.winsThresholds = [int(s) for s in testDict.get('winsThresholds','').split()]
-        
+
         self.maxPoints = sum([len(t) for t in [self.scoreThresholds, self.nonTimeoutThresholds, self.winsThresholds]])
         self.agentArgs = testDict.get('agentArgs', '')
 
 
     def execute(self, grades, moduleDict, solutionDict):
         startTime = time.time()
-        
+
         agentType = getattr(moduleDict['multiAgents'], self.agentName)
         agentOpts = pacman.parseAgentArgs(self.agentArgs) if self.agentArgs != '' else {}
         agent = agentType(**agentOpts)
-        
+
         lay = layout.getLayout(self.layoutName, 3)
 
         disp = self.question.getDisplay()
-        
+
         random.seed(self.seed)
         games = pacman.runGames(lay, agent, self.ghosts, disp, self.numGames, False, catchExceptions=True, timeout=self.maxTime)
         totalTime = time.time() - startTime
-        
+
         stats = {'time': totalTime, 'wins': [g.state.isWin() for g in games].count(True),
                  'games': games, 'scores': [g.state.getScore() for g in games],
                  'timeouts': [g.agentTimeout for g in games].count(True), 'crashes': [g.agentCrashed for g in games].count(True)}
 
         averageScore = sum(stats['scores']) / float(len(stats['scores']))
         nonTimeouts = self.numGames - stats['timeouts']
-        wins = stats['wins']        
+        wins = stats['wins']
 
         def gradeThreshold(value, minimum, thresholds, name):
             points = 0
@@ -479,48 +478,48 @@ class EvalAgentTest(testClasses.TestCase):
                         points += 1
             return (passed, points, value, minimum, thresholds, name)
 
-        results = [gradeThreshold(averageScore, self.scoreMinimum, self.scoreThresholds, "average score"), 
-                   gradeThreshold(nonTimeouts, self.nonTimeoutMinimum, self.nonTimeoutThresholds, "games not timed out"), 
+        results = [gradeThreshold(averageScore, self.scoreMinimum, self.scoreThresholds, "average score"),
+                   gradeThreshold(nonTimeouts, self.nonTimeoutMinimum, self.nonTimeoutThresholds, "games not timed out"),
                    gradeThreshold(wins, self.winsMinimum, self.winsThresholds, "wins")]
-        
+
         totalPoints = 0
         for passed, points, value, minimum, thresholds, name in results:
-            if minimum == None and len(thresholds)==0: 
+            if minimum == None and len(thresholds)==0:
                 continue
-            
+
             # print passed, points, value, minimum, thresholds, name
             totalPoints += points
             if not passed:
-                assert points == 0                
-                self.addMessage("%s %s (fail: below minimum value %s)" % (value, name, minimum))                
+                assert points == 0
+                self.addMessage("%s %s (fail: below minimum value %s)" % (value, name, minimum))
             else:
                 self.addMessage("%s %s (%s of %s points)" % (value, name, points, len(thresholds)))
-            
+
             if minimum != None:
-                self.addMessage("    Grading scheme:")            
+                self.addMessage("    Grading scheme:")
                 self.addMessage("     < %s:  fail" % (minimum,))
                 if len(thresholds)==0 or minimum != thresholds[0]:
                     self.addMessage("    >= %s:  0 points" % (minimum,))
                 for idx, threshold in enumerate(thresholds):
                     self.addMessage("    >= %s:  %s points" % (threshold, idx+1))
             elif len(thresholds) > 0:
-                self.addMessage("    Grading scheme:")                
+                self.addMessage("    Grading scheme:")
                 self.addMessage("     < %s:  0 points" % (thresholds[0],))
                 for idx, threshold in enumerate(thresholds):
                     self.addMessage("    >= %s:  %s points" % (threshold, idx+1))
-                
+
         if any([not passed for passed, _, _, _, _, _ in results]):
             totalPoints = 0
-        
+
         return self.testPartial(grades, totalPoints, self.maxPoints)
-                            
+
     def writeSolution(self, moduleDict, filePath):
         handle = open(filePath, 'w')
         handle.write('# This is the solution file for %s.\n' % self.path)
         handle.write('# File intentionally blank.\n')
         handle.close()
         return True
-    
+
 
 
 
