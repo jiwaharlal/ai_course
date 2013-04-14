@@ -14,5 +14,5 @@ winsMinimum: "1"
 winsThresholds: "5"
 
 
-randomSeed: "testing"
+randomSeed: "0"
 ghosts: "[RandomGhost(1)]"
